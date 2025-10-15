@@ -173,6 +173,14 @@ WHERE t.relname = '$tableName' AND n.nspname = '$schemaName';
       ColumnType? vectorColumnType;
 
       final indexType = index[7] as String;
+
+      // Extract operator class names for ALL index types
+      var opclassNames = index[9];
+      List<String> operatorClasses = [];
+      if (opclassNames is List<String>) {
+        operatorClasses = opclassNames;
+      }
+
       if (['hnsw', 'ivfflat'].contains(indexType)) {
         // Parse index parameters from reloptions
         var reloptions = index[8];
@@ -186,11 +194,10 @@ WHERE t.relname = '$tableName' AND n.nspname = '$schemaName';
         }
 
         // Extract pgvector distance metric from operator class
-        var opclassNames = index[9];
-        if (opclassNames is List<String> && opclassNames.isNotEmpty) {
+        if (operatorClasses.isNotEmpty) {
           // For pgvector, the first operator class contains the distance metric
           final opClassRegex = RegExp(r'(\w+)_(\w+)_ops');
-          final match = opClassRegex.firstMatch(opclassNames[0]);
+          final match = opClassRegex.firstMatch(operatorClasses[0]);
 
           if (match != null && match.groupCount >= 1) {
             vectorColumnType = VectorColumnType.vectorTypes
@@ -211,11 +218,29 @@ WHERE t.relname = '$tableName' AND n.nspname = '$schemaName';
         tableSpace: index[1],
         elements: List.generate(
             indkeyNames.length,
-            (i) => IndexElementDefinition(
+            (i) {
+              // Build definition with operator class if present
+              var definition = indkeyNames[i].removeSurroundingQuotes;
+              // Add operator class to definition if it exists and is not default
+              if (i < operatorClasses.length) {
+                final opClass = operatorClasses[i];
+                // Only add operator class if it's explicitly specified (not default)
+                // Common default operator classes to skip:
+                // - btree: int4_ops, int8_ops, text_ops, etc.
+                // - gin: array_ops, jsonb_ops, etc.
+                // For GIN indexes with non-default operator classes (like gin_trgm_ops), we include them
+                if (indexType == 'gin' && !['array_ops', 'jsonb_ops', 'jsonb_path_ops'].contains(opClass)) {
+                  definition = '$definition $opClass';
+                }
+              }
+
+              return IndexElementDefinition(
                 type: indkeyIsColumn[i]
                     ? IndexElementDefinitionType.column
                     : IndexElementDefinitionType.expression,
-                definition: indkeyNames[i].removeSurroundingQuotes)),
+                definition: definition,
+              );
+            }),
         type: index[7],
         isUnique: index[2],
         isPrimary: index[3],

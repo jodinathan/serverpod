@@ -419,7 +419,13 @@ extension IndexDefinitionPgSqlGeneration on IndexDefinition {
     var out = '';
 
     var uniqueStr = isUnique ? ' UNIQUE' : '';
-    var elementStrs = elements.map((e) => '"${e.definition}"');
+    var elementStrs = elements.map((e) {
+      // If it's an expression, don't quote it
+      // If it's a column, quote it
+      return e.type == IndexElementDefinitionType.expression
+          ? e.definition
+          : '"${e.definition}"';
+    });
     var ifNotExistsStr = ifNotExists ? ' IF NOT EXISTS' : '';
 
     String distanceStr = '';

@@ -1160,8 +1160,37 @@ class Restrictions {
         .where((field) => field.shouldPersist)
         .fold(<String>{}, (output, field) => output..add(field.name));
 
+    // Check if a field is an SQL expression or a column name
+    bool _isExpression(String fieldDef) {
+      final trimmed = fieldDef.trim();
+
+      // Check for function calls
+      if (trimmed.contains('(') || trimmed.contains(')')) {
+        return true;
+      }
+
+      // Check for operators
+      final operators = [' + ', ' - ', ' * ', ' / ', ' || ', '::'];
+      for (final op in operators) {
+        if (trimmed.contains(op)) {
+          return true;
+        }
+      }
+
+      // Check for SQL functions without parentheses
+      final functionKeywords = ['COALESCE', 'NULLIF', 'CASE', 'WHEN'];
+      for (final keyword in functionKeywords) {
+        if (trimmed.toUpperCase().contains(keyword)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    // Only validate fields that are NOT expressions
     var missingFieldErrors = indexFields
-        .where((field) => !validDatabaseFieldNames.contains(field))
+        .where((field) => !_isExpression(field) && !validDatabaseFieldNames.contains(field))
         .map((field) => SourceSpanSeverityException(
               'The field name "$field" is not added to the class or has an !persist scope.',
               span,

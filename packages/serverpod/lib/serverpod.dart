@@ -15,6 +15,9 @@ export 'package:serverpod/relic.dart';
 // Database
 export 'package:serverpod/database.dart';
 
+// PostgreSQL-specific extensions
+export 'src/database/extensions/column_string_unaccent_pgsql_extension.dart';
+
 // Serialization and logging
 export 'package:serverpod_serialization/serverpod_serialization.dart';
 export 'package:serverpod/src/util/http_request_extension.dart';

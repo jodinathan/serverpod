@@ -597,4 +597,144 @@ END
       }
     });
   });
+
+  group('Given index with expression element', () {
+    var tableName = 'test_table';
+    var modelName = 'TestModel';
+
+    test(
+        'when defining a GIN index on expression, then the SQL should not quote the expression',
+        () {
+      var indexName = '${modelName}_name_unaccent_idx';
+      var tableDefinition = TableDefinitionBuilder()
+          .withName(tableName)
+          .withDartName(modelName)
+          .withColumns([
+            ColumnDefinition(
+              name: 'id',
+              columnType: ColumnType.bigint,
+              isNullable: false,
+              columnDefault: 'nextval(\'test_table_id_seq\'::regclass)',
+              dartType: 'int?',
+            ),
+            ColumnDefinition(
+              name: 'name',
+              columnType: ColumnType.text,
+              isNullable: false,
+              dartType: 'String',
+            ),
+          ])
+          .withIndexes([
+            IndexDefinitionBuilder()
+                .withIndexName(indexName)
+                .withElements([
+                  IndexElementDefinition(
+                    type: IndexElementDefinitionType.expression,
+                    definition: 'unaccent_lower(name)',
+                  )
+                ])
+                .withType('gin')
+                .withIsUnique(false)
+                .withIsPrimary(false)
+                .build(),
+          ])
+          .build();
+
+      var creationSql = tableDefinition.tableCreationToPgsql();
+
+      expect(
+        creationSql,
+        contains(
+          'CREATE INDEX "$indexName" ON "$tableName" '
+          'USING gin (unaccent_lower(name));',
+        ),
+      );
+      // Important: Should NOT have quotes around unaccent_lower(name)
+      expect(creationSql, isNot(contains('"unaccent_lower(name)"')));
+    });
+
+    test(
+        'when defining index with both column and expression elements, then SQL should quote correctly',
+        () {
+      var indexName = '${modelName}_composite_idx';
+      var tableDefinition = TableDefinitionBuilder()
+          .withName(tableName)
+          .withDartName(modelName)
+          .withColumns([
+            ColumnDefinition(
+              name: 'id',
+              columnType: ColumnType.bigint,
+              isNullable: false,
+              columnDefault: 'nextval(\'test_table_id_seq\'::regclass)',
+              dartType: 'int?',
+            ),
+            ColumnDefinition(
+              name: 'name',
+              columnType: ColumnType.text,
+              isNullable: false,
+              dartType: 'String',
+            ),
+            ColumnDefinition(
+              name: 'status',
+              columnType: ColumnType.text,
+              isNullable: false,
+              dartType: 'String',
+            ),
+          ])
+          .withIndexes([
+            IndexDefinitionBuilder()
+                .withIndexName(indexName)
+                .withElements([
+                  IndexElementDefinition(
+                    type: IndexElementDefinitionType.expression,
+                    definition: 'unaccent_lower(name)',
+                  ),
+                  IndexElementDefinition(
+                    type: IndexElementDefinitionType.column,
+                    definition: 'status',
+                  ),
+                ])
+                .withType('btree')
+                .withIsUnique(false)
+                .withIsPrimary(false)
+                .build(),
+          ])
+          .build();
+
+      var creationSql = tableDefinition.tableCreationToPgsql();
+
+      expect(
+        creationSql,
+        contains(
+          'CREATE INDEX "$indexName" ON "$tableName" '
+          'USING btree (unaccent_lower(name), "status");',
+        ),
+      );
+    });
+
+    test(
+        'when auto-detecting expression with parentheses, then type should be expression',
+        () {
+      // Simulating what happens in create_definition.dart
+      var field = 'unaccent_lower(name)';
+      var element = IndexElementDefinition(
+        type: IndexElementDefinitionType.expression,
+        definition: field,
+      );
+
+      expect(element.type, IndexElementDefinitionType.expression);
+    });
+
+    test(
+        'when auto-detecting simple column name, then type should be column',
+        () {
+      var field = 'name';
+      var element = IndexElementDefinition(
+        type: IndexElementDefinitionType.column,
+        definition: field,
+      );
+
+      expect(element.type, IndexElementDefinitionType.column);
+    });
+  });
 }

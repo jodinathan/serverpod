@@ -59,7 +59,7 @@ DatabaseDefinition createDatabaseDefinitionFromModels(
                 elements: [
                   for (var field in index.fields)
                     IndexElementDefinition(
-                        type: IndexElementDefinitionType.column,
+                        type: _detectIndexElementType(field),
                         definition: field)
                 ],
                 type: index.type,
@@ -220,4 +220,40 @@ String _escapeSqlString(String value) {
   throw FormatException(
     'The string contains invalid quoting or escape sequences: $value',
   );
+}
+
+/// Auto-detect if a field definition is an expression or a column name.
+///
+/// Heuristics:
+/// - Contains '(' or ')' → expression (e.g., "unaccent_lower(name)")
+/// - Contains spaces → expression (e.g., "COALESCE(a, b)")
+/// - Contains operators → expression (e.g., "a || b")
+/// - Otherwise → column name
+IndexElementDefinitionType _detectIndexElementType(String fieldDef) {
+  // Remove leading/trailing whitespace
+  final trimmed = fieldDef.trim();
+
+  // Check for function calls
+  if (trimmed.contains('(') || trimmed.contains(')')) {
+    return IndexElementDefinitionType.expression;
+  }
+
+  // Check for operators (but not in quoted strings)
+  final operators = [' + ', ' - ', ' * ', ' / ', ' || ', '::'];
+  for (final op in operators) {
+    if (trimmed.contains(op)) {
+      return IndexElementDefinitionType.expression;
+    }
+  }
+
+  // Check for SQL functions without parentheses (rare but possible)
+  final functionKeywords = ['COALESCE', 'NULLIF', 'CASE', 'WHEN'];
+  for (final keyword in functionKeywords) {
+    if (trimmed.toUpperCase().contains(keyword)) {
+      return IndexElementDefinitionType.expression;
+    }
+  }
+
+  // Default: assume it's a column name
+  return IndexElementDefinitionType.column;
 }
