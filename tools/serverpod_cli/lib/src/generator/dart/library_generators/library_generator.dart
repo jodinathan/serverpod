@@ -1598,6 +1598,8 @@ extension on DatabaseDefinition {
                 'type': literalString(index.type),
                 'isUnique': literalBool(index.isUnique),
                 'isPrimary': literalBool(index.isPrimary),
+                if (index.predicate != null)
+                  'predicate': literalString(index.predicate!),
                 if (index.vectorDistanceFunction != null)
                   'vectorDistanceFunction': refer(
                       'VectorDistanceFunction.${index.vectorDistanceFunction!.name}',

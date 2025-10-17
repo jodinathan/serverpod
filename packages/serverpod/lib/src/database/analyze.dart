@@ -213,6 +213,9 @@ WHERE t.relname = '$tableName' AND n.nspname = '$schemaName';
         }
       }
 
+      var rawPredicate = index[6];
+      var normalizedPredicate = rawPredicate != null ? normalizePredicate(rawPredicate as String) : null;
+
       return IndexDefinition(
         indexName: index[0],
         tableSpace: index[1],
@@ -244,8 +247,7 @@ WHERE t.relname = '$tableName' AND n.nspname = '$schemaName';
         type: index[7],
         isUnique: index[2],
         isPrimary: index[3],
-        //TODO: Maybe unquote in the future. Should be considered when Serverpod introduces partial indexes.
-        predicate: index[6],
+        predicate: normalizedPredicate,
         vectorDistanceFunction: vectorDistanceFunction,
         vectorColumnType: vectorColumnType,
         parameters: parameters.isEmpty ? null : parameters,

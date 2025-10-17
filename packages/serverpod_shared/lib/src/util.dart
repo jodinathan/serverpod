@@ -127,3 +127,37 @@ String truncateColumnQueryAlias(
 
   return '${truncatedPrefix}_$columnName';
 }
+
+/// Normalizes a predicate string by removing surrounding parentheses and trimming whitespace.
+///
+/// PostgreSQL's pg_get_expr returns predicates with parentheses like: `("deletedAt" IS NULL)`
+/// But Serverpod CLI generates predicates without them: `"deletedAt" IS NULL`
+///
+/// This function normalizes both to the same format for comparison.
+String normalizePredicate(String predicate) {
+  var normalized = predicate.trim();
+
+  // Remove surrounding parentheses if they exist
+  while (normalized.startsWith('(') && normalized.endsWith(')')) {
+    // Check if these are outer parentheses (not part of the expression)
+    var inner = normalized.substring(1, normalized.length - 1).trim();
+    // Make sure we don't remove parentheses that are part of the expression
+    // by checking if there are balanced parentheses inside
+    var depth = 0;
+    var hasUnbalanced = false;
+    for (var i = 0; i < inner.length; i++) {
+      if (inner[i] == '(') depth++;
+      if (inner[i] == ')') {
+        depth--;
+        if (depth < 0) {
+          hasUnbalanced = true;
+          break;
+        }
+      }
+    }
+    if (hasUnbalanced || depth != 0) break;
+    normalized = inner;
+  }
+
+  return normalized;
+}

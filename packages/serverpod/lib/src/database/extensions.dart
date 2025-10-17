@@ -2,6 +2,7 @@ import 'package:serverpod/protocol.dart';
 import 'package:serverpod/src/database/database_pool_manager.dart';
 import 'package:collection/collection.dart';
 import 'package:serverpod/src/database/migrations/table_comparison_warning.dart';
+import 'package:serverpod_shared/serverpod_shared.dart';
 
 /// Comparison methods for [DatabaseDefinition].
 extension DatabaseComparisons on DatabaseDefinition {
@@ -270,7 +271,11 @@ extension IndexComparisons on IndexDefinition {
       );
     }
 
-    if (predicate != other.predicate) {
+    // Normalize predicates before comparison to handle PostgreSQL's formatting
+    var normalizedPredicate = predicate != null ? normalizePredicate(predicate!) : null;
+    var normalizedOtherPredicate = other.predicate != null ? normalizePredicate(other.predicate!) : null;
+
+    if (normalizedPredicate != normalizedOtherPredicate) {
       mismatches.add(
         IndexComparisonWarning(
           name: 'predicate',
