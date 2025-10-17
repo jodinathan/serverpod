@@ -1372,6 +1372,34 @@ class Restrictions {
     return errors;
   }
 
+  List<SourceSpanSeverityException> validateIndexPredicateValue(
+    String parentNodeName,
+    dynamic content,
+    SourceSpan? span,
+  ) {
+    if (content == null) return [];
+
+    if (content is! String) {
+      return [
+        SourceSpanSeverityException(
+          'The "${Keyword.predicate}" property must be a String.',
+          span,
+        )
+      ];
+    }
+
+    if (content.trim().isEmpty) {
+      return [
+        SourceSpanSeverityException(
+          'The "${Keyword.predicate}" property cannot be empty.',
+          span,
+        )
+      ];
+    }
+
+    return [];
+  }
+
   List<SourceSpanSeverityException> validateIndexType(
     String parentNodeName,
     dynamic content,

@@ -411,6 +411,88 @@ extension ColumnDefinitionPgSqlGeneration on ColumnDefinition {
   }
 }
 
+/// Quotes PostgreSQL identifiers (column names) in a predicate expression.
+///
+/// This function processes a WHERE clause predicate and adds double quotes around
+/// identifiers that look like column names, while preserving SQL syntax.
+///
+/// Examples:
+/// - `deletedAt IS NULL` → `"deletedAt" IS NULL`
+/// - `status = 1 AND deletedAt IS NULL` → `"status" = 1 AND "deletedAt" IS NULL`
+/// - `UPPER(name) = 'TEST'` → `UPPER("name") = 'TEST'`
+String _quotePredicateIdentifiers(String predicate) {
+  // Simple heuristic: quote words that look like identifiers
+  // This regex matches word boundaries around potential column names
+  // but avoids SQL keywords and quoted strings
+
+  final sqlKeywords = {
+    'IS', 'NULL', 'NOT', 'AND', 'OR', 'IN', 'BETWEEN', 'LIKE', 'ILIKE',
+    'TRUE', 'FALSE', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'EXISTS',
+    'SELECT', 'FROM', 'WHERE', 'GROUP', 'BY', 'ORDER', 'HAVING', 'LIMIT',
+    'ASC', 'DESC', 'DISTINCT', 'ALL', 'ANY', 'SOME'
+  };
+
+  // Split by spaces and operators while preserving them
+  final tokens = <String>[];
+  final buffer = StringBuffer();
+
+  for (var i = 0; i < predicate.length; i++) {
+    final char = predicate[i];
+
+    if (char == ' ' || char == '(' || char == ')' || char == '=' ||
+        char == '<' || char == '>' || char == '!' || char == ',') {
+      if (buffer.isNotEmpty) {
+        tokens.add(buffer.toString());
+        buffer.clear();
+      }
+      tokens.add(char);
+    } else {
+      buffer.write(char);
+    }
+  }
+
+  if (buffer.isNotEmpty) {
+    tokens.add(buffer.toString());
+  }
+
+  // Process tokens and quote identifiers
+  final result = StringBuffer();
+  var inString = false;
+  var stringChar = '';
+
+  for (var token in tokens) {
+    // Check if we're entering/exiting a string literal
+    if ((token.startsWith("'") || token.startsWith('"')) && token.length > 1) {
+      stringChar = token[0];
+      inString = token.endsWith(stringChar) && token.length > 1 ? false : true;
+      result.write(token);
+      continue;
+    }
+
+    if (inString) {
+      result.write(token);
+      if (token.endsWith(stringChar)) {
+        inString = false;
+      }
+      continue;
+    }
+
+    // Don't quote if it's already quoted, a keyword, a number, or an operator
+    if (token.startsWith('"') ||
+        sqlKeywords.contains(token.toUpperCase()) ||
+        RegExp(r'^\d+$').hasMatch(token) ||
+        token.trim().isEmpty ||
+        token.length == 1) {
+      result.write(token);
+    } else {
+      // Likely a column name - quote it
+      result.write('"$token"');
+    }
+  }
+
+  return result.toString();
+}
+
 extension IndexDefinitionPgSqlGeneration on IndexDefinition {
   String toPgSql({
     required String tableName,
@@ -441,8 +523,10 @@ extension IndexDefinitionPgSqlGeneration on IndexDefinition {
           : '';
     }
 
+    var predicateStr = (predicate != null) ? ' WHERE ${_quotePredicateIdentifiers(predicate!)}' : '';
+
     out += 'CREATE$uniqueStr INDEX$ifNotExistsStr "$indexName" ON "$tableName" '
-        'USING $type (${elementStrs.join(', ')}$distanceStr)$pgvectorParams;\n';
+        'USING $type (${elementStrs.join(', ')}$distanceStr)$pgvectorParams$predicateStr;\n';
 
     return out;
   }

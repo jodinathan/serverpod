@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:serverpod/protocol.dart';
 import 'package:serverpod/serverpod.dart';
+import 'package:serverpod_shared/serverpod_shared.dart';
 
 /// A function that returns a [Column] for a [Table].
 typedef ColumnSelections<T extends Table> = List<Column> Function(T);
@@ -21,7 +22,14 @@ abstract class Column<T> {
   final Table table;
 
   /// Query alias for the [Column].
-  String get queryAlias => '${table.queryPrefix}.$_columnName';
+  String get queryAlias {
+    // Use special truncation that preserves column name to avoid collisions
+    return truncateColumnQueryAlias(
+      table.queryPrefix,
+      _columnName,
+      DatabaseConstants.pgsqlMaxNameLimitation,
+    );
+  }
 
   /// flag to tell if this [Column] has any [default] value
   final bool hasDefault;

@@ -19,6 +19,7 @@ class Keyword {
   static const String unique = 'unique';
   static const String distanceFunction = 'distanceFunction';
   static const String parameters = 'parameters';
+  static const String predicate = 'predicate';
   static const String parent = 'parent';
   static const String relation = 'relation';
   static const String field = 'field';

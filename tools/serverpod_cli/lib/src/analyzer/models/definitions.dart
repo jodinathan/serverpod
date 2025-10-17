@@ -335,6 +335,9 @@ class SerializableModelIndexDefinition {
   /// The parameters of the index, if any. Used for Vector indexes.
   final Map<String, String>? parameters;
 
+  /// The predicate (WHERE clause) for partial indexes.
+  final String? predicate;
+
   /// Create a new [SerializableModelIndexDefinition].
   SerializableModelIndexDefinition({
     required this.name,
@@ -343,6 +346,7 @@ class SerializableModelIndexDefinition {
     required this.fields,
     this.vectorDistanceFunction,
     this.parameters,
+    this.predicate,
   });
 
   /// Whether the index is of vector type.

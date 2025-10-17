@@ -83,3 +83,47 @@ String truncateIdentifier(
 
   return identifier.substring(0, maxLength - hashLength) + digest;
 }
+
+/// Truncates a column query alias while preserving the column name to avoid
+/// collisions in deserialization.
+///
+/// If the full alias exceeds [maxLength], this function:
+/// 1. Preserves the column name at the end
+/// 2. Truncates and hashes only the prefix portion
+/// 3. Recombines them as "hashedPrefix_columnName"
+///
+/// This ensures unique, collision-free aliases even with deep nested includes.
+String truncateColumnQueryAlias(
+  String prefix,
+  String columnName,
+  int maxLength, {
+  int hashLength = 8,
+}) {
+  var fullAlias = '$prefix.$columnName';
+
+  if (fullAlias.length <= maxLength) {
+    return fullAlias;
+  }
+
+  // If column name alone is too long, truncate the full alias normally
+  if (columnName.length >= maxLength) {
+    return truncateIdentifier(fullAlias, maxLength, hashLength: hashLength);
+  }
+
+  // Calculate space available for prefix (including separator and hash)
+  var availableForPrefix = maxLength - columnName.length - 1; // -1 for underscore separator
+
+  if (availableForPrefix <= hashLength) {
+    // Not enough space, use full hash for prefix
+    var hash = sha256.convert(utf8.encode(prefix)).toString();
+    var prefixDigest = hash.substring(0, min(hashLength, availableForPrefix));
+    return '${prefixDigest}_$columnName';
+  }
+
+  // Truncate prefix with hash and combine with column name
+  var hash = sha256.convert(utf8.encode(prefix)).toString();
+  var digest = hash.substring(0, hashLength);
+  var truncatedPrefix = prefix.substring(0, availableForPrefix - hashLength) + digest;
+
+  return '${truncatedPrefix}_$columnName';
+}

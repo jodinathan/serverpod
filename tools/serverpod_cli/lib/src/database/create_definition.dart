@@ -77,6 +77,7 @@ DatabaseDefinition createDatabaseDefinitionFromModels(
                             .databaseTypeEnum)
                     : null,
                 parameters: index.parameters,
+                predicate: index.predicate,
               ),
           ],
           managed: classDefinition.manageMigration,

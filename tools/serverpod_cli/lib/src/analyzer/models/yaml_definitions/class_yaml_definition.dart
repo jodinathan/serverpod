@@ -230,6 +230,10 @@ class ClassYamlDefinition {
                 keyRestriction: restrictions.validateIndexParametersKey,
                 valueRestriction: restrictions.validateIndexParametersValue,
               ),
+              ValidateNode(
+                Keyword.predicate,
+                valueRestriction: restrictions.validateIndexPredicateValue,
+              ),
             },
           )
         },

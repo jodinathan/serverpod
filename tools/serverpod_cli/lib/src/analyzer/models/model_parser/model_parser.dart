@@ -598,6 +598,7 @@ class ModelParser {
       var distanceFunction =
           _parseDistanceFunction(nodeDocument, type, indexFieldsTypes);
       var parameters = _parseParametersKey(nodeDocument);
+      var predicate = _parsePredicate(nodeDocument);
 
       return SerializableModelIndexDefinition(
         name: indexName,
@@ -606,6 +607,7 @@ class ModelParser {
         fields: indexFields,
         vectorDistanceFunction: distanceFunction,
         parameters: parameters,
+        predicate: predicate,
       );
     });
 
@@ -691,6 +693,15 @@ class ModelParser {
     }
 
     return parameters.isNotEmpty ? parameters : null;
+  }
+
+  static String? _parsePredicate(YamlMap documentContents) {
+    var predicateNode = documentContents.nodes[Keyword.predicate];
+    var predicateValue = predicateNode?.value;
+
+    if (predicateValue is! String) return null;
+
+    return predicateValue;
   }
 
   static ProtocolEnumValueDefinition? _parseEnumDefaultValue(
