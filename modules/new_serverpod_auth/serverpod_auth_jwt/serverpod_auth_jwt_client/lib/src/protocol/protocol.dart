@@ -116,10 +116,8 @@ class Protocol extends _i1.SerializationManager {
       return 'TokenPair';
     }
     className = _i8.Protocol().getClassNameForObject(data);
-    if (className != null) {
-      return 'serverpod_auth_user.$className';
-    }
-    return null;
+    return 'serverpod_auth_user.$className';
+      return null;
   }
 
   @override

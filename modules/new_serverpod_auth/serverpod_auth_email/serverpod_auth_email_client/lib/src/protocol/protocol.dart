@@ -53,22 +53,14 @@ class Protocol extends _i1.SerializationManager {
     String? className = super.getClassNameForObject(data);
     if (className != null) return className;
     className = _i2.Protocol().getClassNameForObject(data);
-    if (className != null) {
-      return 'serverpod_auth_email_account.$className';
-    }
-    className = _i3.Protocol().getClassNameForObject(data);
-    if (className != null) {
-      return 'serverpod_auth_profile.$className';
-    }
-    className = _i4.Protocol().getClassNameForObject(data);
-    if (className != null) {
-      return 'serverpod_auth_session.$className';
-    }
-    className = _i5.Protocol().getClassNameForObject(data);
-    if (className != null) {
-      return 'serverpod_auth_user.$className';
-    }
-    return null;
+    return 'serverpod_auth_email_account.$className';
+      className = _i3.Protocol().getClassNameForObject(data);
+    return 'serverpod_auth_profile.$className';
+      className = _i4.Protocol().getClassNameForObject(data);
+    return 'serverpod_auth_session.$className';
+      className = _i5.Protocol().getClassNameForObject(data);
+    return 'serverpod_auth_user.$className';
+      return null;
   }
 
   @override

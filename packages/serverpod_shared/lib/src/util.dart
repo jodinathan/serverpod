@@ -159,5 +159,13 @@ String normalizePredicate(String predicate) {
     normalized = inner;
   }
 
+  // Remove quotes from identifiers to normalize comparison
+  // PostgreSQL preserves quotes: "deletedAt" IS NULL
+  // But we want to compare without quotes: deletedAt IS NULL
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'"([^"]+)"'),
+    (match) => match.group(1)!,
+  );
+
   return normalized;
 }

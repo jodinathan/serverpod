@@ -49,10 +49,8 @@ class Protocol extends _i1.SerializationManager {
       return 'UserProfileModel';
     }
     className = _i3.Protocol().getClassNameForObject(data);
-    if (className != null) {
-      return 'serverpod_auth_user.$className';
-    }
-    return null;
+    return 'serverpod_auth_user.$className';
+      return null;
   }
 
   @override

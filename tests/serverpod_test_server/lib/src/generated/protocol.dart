@@ -10580,10 +10580,8 @@ class Protocol extends _i1.SerializationManagerServer {
       return 'serverpod_auth.$className';
     }
     className = _i4.Protocol().getClassNameForObject(data);
-    if (className != null) {
-      return 'serverpod_test_module.$className';
-    }
-    if (data is List<int>) {
+    return 'serverpod_test_module.$className';
+      if (data is List<int>) {
       return 'List<int>';
     }
     if (data is List<_i160.SimpleData>) {

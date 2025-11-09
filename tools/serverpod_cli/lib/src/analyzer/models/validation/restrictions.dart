@@ -1111,12 +1111,14 @@ class Restrictions {
     var referenceClass = parsedModels.findByClassName(parsedType);
 
     var errors = <SourceSpanSeverityException>[];
-    if (!type.endsWith('?')) {
-      errors.add(SourceSpanSeverityException(
-        'Fields with a model relations must be nullable (e.g. $parentNodeName: $type?).',
-        span,
-      ));
-    }
+    // CUSTOMIZAÇÃO: Permitir relações non-nullable para vínculos obrigatórios
+    // Comentado para permitir que PatientClinicUser, ClinicUser, etc tenham relações obrigatórias
+    // if (!type.endsWith('?')) {
+    //   errors.add(SourceSpanSeverityException(
+    //     'Fields with a model relations must be nullable (e.g. $parentNodeName: $type?).',
+    //     span,
+    //   ));
+    // }
 
     if (referenceClass is! ClassDefinition) {
       errors.add(SourceSpanSeverityException(
@@ -1161,7 +1163,7 @@ class Restrictions {
         .fold(<String>{}, (output, field) => output..add(field.name));
 
     // Check if a field is an SQL expression or a column name
-    bool _isExpression(String fieldDef) {
+    bool isExpression(String fieldDef) {
       final trimmed = fieldDef.trim();
 
       // Check for function calls
@@ -1190,7 +1192,7 @@ class Restrictions {
 
     // Only validate fields that are NOT expressions
     var missingFieldErrors = indexFields
-        .where((field) => !_isExpression(field) && !validDatabaseFieldNames.contains(field))
+        .where((field) => !isExpression(field) && !validDatabaseFieldNames.contains(field))
         .map((field) => SourceSpanSeverityException(
               'The field name "$field" is not added to the class or has an !persist scope.',
               span,

@@ -61,10 +61,8 @@ class Protocol extends _i1.SerializationManager {
       return 'serverpod_auth.$className';
     }
     className = _i5.Protocol().getClassNameForObject(data);
-    if (className != null) {
-      return 'serverpod_chat.$className';
-    }
-    return null;
+    return 'serverpod_chat.$className';
+      return null;
   }
 
   @override

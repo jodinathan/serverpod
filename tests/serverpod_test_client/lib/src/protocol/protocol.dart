@@ -4159,10 +4159,8 @@ class Protocol extends _i1.SerializationManager {
       return 'serverpod_auth.$className';
     }
     className = _i153.Protocol().getClassNameForObject(data);
-    if (className != null) {
-      return 'serverpod_test_module.$className';
-    }
-    if (data is List<int>) {
+    return 'serverpod_test_module.$className';
+      if (data is List<int>) {
       return 'List<int>';
     }
     if (data is List<_i156.SimpleData>) {
