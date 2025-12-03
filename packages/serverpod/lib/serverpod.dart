@@ -18,7 +18,7 @@ export 'package:serverpod/database.dart';
 // PostgreSQL-specific extensions
 export 'src/database/extensions/column_string_unaccent_pgsql_extension.dart';
 
-// Serialization and logging
+// Serialization and logging (includes JSONB support)
 export 'package:serverpod_serialization/serverpod_serialization.dart';
 export 'package:serverpod/src/util/http_request_extension.dart';
 export 'package:serverpod/src/generated/log_level.dart';

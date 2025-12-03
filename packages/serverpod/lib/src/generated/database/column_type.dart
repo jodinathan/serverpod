@@ -55,7 +55,10 @@ enum ColumnType implements _i1.SerializableModel {
   sparsevec,
 
   /// Dart type: [Bit]
-  bit;
+  bit,
+
+  /// Dart type: [Jsonb] - PostgreSQL binary JSON
+  jsonb;
 
   static ColumnType fromJson(int index) {
     switch (index) {
@@ -87,6 +90,8 @@ enum ColumnType implements _i1.SerializableModel {
         return ColumnType.sparsevec;
       case 13:
         return ColumnType.bit;
+      case 14:
+        return ColumnType.jsonb;
       default:
         throw ArgumentError(
             'Value "$index" cannot be converted to "ColumnType"');
@@ -95,6 +100,7 @@ enum ColumnType implements _i1.SerializableModel {
 
   @override
   int toJson() => index;
+
   @override
   String toString() => name;
 }

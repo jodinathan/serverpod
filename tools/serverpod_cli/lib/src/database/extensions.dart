@@ -364,6 +364,9 @@ extension ColumnDefinitionPgSqlGeneration on ColumnDefinition {
       case ColumnType.json:
         type = 'json';
         break;
+      case ColumnType.jsonb:
+        type = 'jsonb';
+        break;
       case ColumnType.text:
         type = 'text';
         break;
@@ -501,19 +504,36 @@ extension IndexDefinitionPgSqlGeneration on IndexDefinition {
     var out = '';
 
     var uniqueStr = isUnique ? ' UNIQUE' : '';
-    var elementStrs = elements.map((e) {
-      // If it's an expression, don't quote it
-      // If it's a column, quote it
-      return e.type == IndexElementDefinitionType.expression
-          ? e.definition
-          : '"${e.definition}"';
-    });
     var ifNotExistsStr = ifNotExists ? ' IF NOT EXISTS' : '';
 
+    late Iterable<String> elementStrs;
     String distanceStr = '';
     String pgvectorParams = '';
 
-    if (type == 'hnsw' || type == 'ivfflat') {
+    // GIN index handling
+    if (type == 'gin') {
+      elementStrs = elements.map((e) {
+        if (e.type == IndexElementDefinitionType.expression) {
+          // Expression like: (metadata->>'key')
+          return e.definition;
+        } else {
+          // Column with optional operator class
+          // Example: "metadata jsonb_path_ops" or just "metadata"
+          final trimmed = e.definition.trim();
+          final parts = trimmed.split(RegExp(r'\s+'));
+
+          if (parts.length > 1) {
+            // Has operator class: metadata jsonb_path_ops
+            final columnName = parts[0];
+            final operatorClass = parts.sublist(1).join(' ');
+            return '"$columnName" $operatorClass';
+          } else {
+            // No operator class: metadata
+            return '"$trimmed"';
+          }
+        }
+      });
+    } else if (type == 'hnsw' || type == 'ivfflat') {
       var prefix = vectorColumnType?.name;
       distanceStr = ' ${vectorDistanceFunction!.asDistanceFunction(prefix!)}';
 
@@ -521,6 +541,21 @@ extension IndexDefinitionPgSqlGeneration on IndexDefinition {
       pgvectorParams = (paramStrings?.isNotEmpty == true)
           ? ' WITH (${paramStrings!.join(', ')})'
           : '';
+
+      elementStrs = elements.map((e) {
+        return e.type == IndexElementDefinitionType.expression
+            ? '${e.definition}$distanceStr'
+            : '"${e.definition}"$distanceStr';
+      });
+    } else {
+      // Regular index (btree, hash, etc)
+      elementStrs = elements.map((e) {
+        // If it's an expression, don't quote it
+        // If it's a column, quote it
+        return e.type == IndexElementDefinitionType.expression
+            ? e.definition
+            : '"${e.definition}"';
+      });
     }
 
     var predicateStr = (predicate != null) ? ' WHERE ${_quotePredicateIdentifiers(predicate!)}' : '';

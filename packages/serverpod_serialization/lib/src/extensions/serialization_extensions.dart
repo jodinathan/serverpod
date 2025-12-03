@@ -250,3 +250,18 @@ extension BitJsonExtension on Bit {
         : _fromList(json.decode(value) as List);
   }
 }
+
+/// Expose toJson on Jsonb
+extension JsonbJsonExtension on Jsonb {
+  /// Returns a deserialized version of the [Jsonb] from various formats.
+  static Jsonb fromJson(dynamic value) {
+    if (value is Jsonb) return value;
+    if (value is Map<String, dynamic>) return Jsonb(value);
+    if (value is String) return Jsonb(json.decode(value) as Map<String, dynamic>);
+
+    throw DeserializationTypeNotFoundException(type: value.runtimeType);
+  }
+
+  /// Returns a serialized version of the [Jsonb] as a [Map<String, dynamic>].
+  Map<String, dynamic> toJson() => data;
+}

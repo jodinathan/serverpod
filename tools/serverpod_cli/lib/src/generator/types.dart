@@ -314,7 +314,7 @@ class TypeDefinition {
           t.url = 'package:$packageName/$packageName.dart';
         } else if (url == 'serverpod' ||
             (url == null &&
-                (['UuidValue', ...vectorClassNames]).contains(className))) {
+                (['UuidValue', 'Jsonb', ...vectorClassNames]).contains(className))) {
           // serverpod: reference
           t.url = serverpodUrl(serverCode);
         } else if (url?.startsWith('project:') ?? false) {
@@ -397,6 +397,7 @@ class TypeDefinition {
     if (className == 'HalfVector') return 'halfvec';
     if (className == 'SparseVector') return 'sparsevec';
     if (className == 'Bit') return 'bit';
+    if (className == 'Jsonb') return 'jsonb';
 
     return 'json';
   }

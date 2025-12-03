@@ -228,12 +228,23 @@ WHERE t.relname = '$tableName' AND n.nspname = '$schemaName';
               if (i < operatorClasses.length) {
                 final opClass = operatorClasses[i];
                 // Only add operator class if it's explicitly specified (not default)
-                // Common default operator classes to skip:
-                // - btree: int4_ops, int8_ops, text_ops, etc.
-                // - gin: array_ops, jsonb_ops, etc.
-                // For GIN indexes with non-default operator classes (like gin_trgm_ops), we include them
-                if (indexType == 'gin' && !['array_ops', 'jsonb_ops', 'jsonb_path_ops'].contains(opClass)) {
-                  definition = '$definition $opClass';
+                if (indexType == 'gin') {
+                  // Default GIN operator classes (implicit, don't include)
+                  const defaultGinOperatorClasses = {
+                    'array_ops',     // Default for arrays
+                    'jsonb_ops',     // Default for JSONB
+                  };
+
+                  // Explicit GIN operator classes (must include)
+                  const explicitGinOperatorClasses = {
+                    'jsonb_path_ops', // Explicit JSONB operator class
+                  };
+
+                  // Include if explicit, or if unknown (for safety)
+                  if (explicitGinOperatorClasses.contains(opClass) ||
+                      !defaultGinOperatorClasses.contains(opClass)) {
+                    definition = '$definition $opClass';
+                  }
                 }
               }
 

@@ -31,3 +31,5 @@ values:
   - sparsevec
   ### Dart type: [Bit]
   - bit
+  ### Dart type: [Jsonb] - PostgreSQL binary JSON
+  - jsonb

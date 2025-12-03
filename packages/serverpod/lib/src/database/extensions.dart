@@ -378,7 +378,11 @@ extension IndexElementDefinitionComparison on IndexElementDefinition {
       );
     }
 
-    if (definition != other.definition) {
+    // Normalize definitions before comparison to handle PostgreSQL's formatting
+    var normalizedDefinition = normalizeIndexDefinition(definition);
+    var normalizedOtherDefinition = normalizeIndexDefinition(other.definition);
+
+    if (normalizedDefinition != normalizedOtherDefinition) {
       mismatches.add(
         IndexComparisonWarning(
           name: 'element definition',

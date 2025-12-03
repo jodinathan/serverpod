@@ -133,6 +133,9 @@ String truncateColumnQueryAlias(
 /// PostgreSQL's pg_get_expr returns predicates with parentheses like: `("deletedAt" IS NULL)`
 /// But Serverpod CLI generates predicates without them: `"deletedAt" IS NULL`
 ///
+/// PostgreSQL also adds ::text casting to JSONB expressions: `(metadata ->> 'type'::text)`
+/// But Serverpod generates them without: `(metadata->>'type')`
+///
 /// This function normalizes both to the same format for comparison.
 String normalizePredicate(String predicate) {
   var normalized = predicate.trim();
@@ -159,9 +162,77 @@ String normalizePredicate(String predicate) {
     normalized = inner;
   }
 
+  // Normalize JSONB operator expressions
+  // PostgreSQL returns: metadata ->> 'type'::text
+  // Serverpod expects: metadata->>'type'
+  normalized = normalized.replaceAllMapped(
+    RegExp(r"->> '([^']+)'::text"),
+    (match) => "->>'${match.group(1)}'",
+  );
+
+  // Also handle double quotes variant
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'->> "([^"]+)"::text'),
+    (match) => '->>"${match.group(1)}"',
+  );
+
+  // Remove extra spaces around JSONB operators
+  normalized = normalized.replaceAll(RegExp(r'\s*->>\s*'), '->>');
+  normalized = normalized.replaceAll(RegExp(r'\s*->\s*'), '->');
+
   // Remove quotes from identifiers to normalize comparison
   // PostgreSQL preserves quotes: "deletedAt" IS NULL
   // But we want to compare without quotes: deletedAt IS NULL
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'"([^"]+)"'),
+    (match) => match.group(1)!,
+  );
+
+  // Remove all redundant parentheses around individual conditions in compound predicates
+  // (deletedAt IS NULL) AND (settings IS NOT NULL) -> deletedAt IS NULL AND settings IS NOT NULL
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'\(([^()]+)\)'),
+    (match) => match.group(1)!,
+  );
+
+  // Normalize whitespace around logical operators
+  normalized = normalized.replaceAll(RegExp(r'\s+AND\s+'), ' AND ');
+  normalized = normalized.replaceAll(RegExp(r'\s+OR\s+'), ' OR ');
+  normalized = normalized.replaceAll(RegExp(r'\s+NOT\s+'), ' NOT ');
+
+  return normalized.trim();
+}
+
+/// Normalizes an index element definition for comparison.
+///
+/// PostgreSQL's pg_get_indexdef may return JSONB expressions with ::text casting:
+/// `(metadata ->> 'type'::text)` but Serverpod generates: `(metadata->>'type')`
+///
+/// This function normalizes both formats for accurate comparison.
+String normalizeIndexDefinition(String definition) {
+  var normalized = definition.trim();
+
+  // Normalize JSONB operator expressions with ::text casting
+  // PostgreSQL returns: metadata ->> 'type'::text
+  // Serverpod expects: metadata->>'type'
+  normalized = normalized.replaceAllMapped(
+    RegExp(r"->> '([^']+)'::text"),
+    (match) => "->>'${match.group(1)}'",
+  );
+
+  // Also handle double quotes variant
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'->> "([^"]+)"::text'),
+    (match) => '->>"${match.group(1)}"',
+  );
+
+  // Remove extra spaces around JSONB operators
+  normalized = normalized.replaceAll(RegExp(r'\s*->>\s*'), '->>');
+  normalized = normalized.replaceAll(RegExp(r'\s*->\s*'), '->');
+
+  // Remove quotes from column identifiers to normalize comparison
+  // PostgreSQL may preserve quotes: "columnName"
+  // But we want to compare without quotes: columnName
   normalized = normalized.replaceAllMapped(
     RegExp(r'"([^"]+)"'),
     (match) => match.group(1)!,

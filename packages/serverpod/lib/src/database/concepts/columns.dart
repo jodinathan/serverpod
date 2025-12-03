@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:serverpod/protocol.dart';
 import 'package:serverpod/serverpod.dart';
+import 'package:serverpod_serialization/serverpod_serialization.dart';
 import 'package:serverpod_shared/serverpod_shared.dart';
 
 /// A function that returns a [Column] for a [Table].
@@ -421,6 +423,98 @@ class ColumnBit extends _ValueOperatorColumn<Bit>
       _encodeValueForQuery(other),
       VectorDistanceFunction.hamming,
     ));
+  }
+}
+
+/// A [Column] holding a [Jsonb] (PostgreSQL binary JSON) value.
+///
+/// Provides efficient storage and querying of semi-structured data.
+/// Supports PostgreSQL JSONB operators and GIN indexes.
+class ColumnJsonb extends _ValueOperatorColumn<Jsonb>
+    with _ColumnDefaultOperations<Jsonb> {
+  /// Creates a new [ColumnJsonb], this is typically done in generated code only.
+  ColumnJsonb(
+    super.columnName,
+    super.table, {
+    super.hasDefault,
+  });
+
+  @override
+  Expression _encodeValueForQuery(Jsonb value) {
+    // Encode as PostgreSQL JSONB literal
+    return EscapedExpression("'${value.toJson()}'::jsonb");
+  }
+
+  /// Checks if this JSONB column contains the specified JSON structure.
+  ///
+  /// Uses PostgreSQL `@>` operator.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Find products where metadata contains {color: 'blue'}
+  /// Product.db.find(
+  ///   session,
+  ///   where: (t) => t.metadata.contains({'color': 'blue'}),
+  /// );
+  /// ```
+  Expression contains(Map<String, dynamic> value) {
+    return _JsonbContainsExpression(
+      this,
+      EscapedExpression("'${jsonEncode(value)}'::jsonb"),
+    );
+  }
+
+  /// Checks if this JSONB column has the specified top-level key.
+  ///
+  /// Uses PostgreSQL `?` operator.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Find products that have a 'size' field
+  /// Product.db.find(
+  ///   session,
+  ///   where: (t) => t.metadata.hasKey('size'),
+  /// );
+  /// ```
+  Expression hasKey(String key) {
+    return _JsonbHasKeyExpression(
+      this,
+      EscapedExpression("'$key'"),
+    );
+  }
+
+  /// Extracts a field from the JSONB as text.
+  ///
+  /// Uses PostgreSQL `->>` operator.
+  /// Returns a ColumnString that can be used with string operations.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Find products where weight > 100
+  /// Product.db.find(
+  ///   session,
+  ///   where: (t) => t.metadata.fieldText('weight').greaterThan('100'),
+  /// );
+  /// ```
+  ColumnString fieldText(String key) {
+    return _JsonbFieldTextColumn(this, key);
+  }
+}
+
+/// Helper class for JSONB field extraction as text
+class _JsonbFieldTextColumn extends ColumnString {
+  final ColumnJsonb _jsonbColumn;
+  final String _key;
+
+  _JsonbFieldTextColumn(this._jsonbColumn, this._key)
+      : super(
+          '${_jsonbColumn.columnName}->>${_jsonbColumn.table.tableName}_jsonb_field',
+          _jsonbColumn.table,
+        );
+
+  @override
+  String toString() {
+    return '${_jsonbColumn.columnName} ->> \'$_key\'';
   }
 }
 
@@ -844,6 +938,22 @@ class _IsDistinctFromExpression<T> extends _TwoPartColumnExpression<T> {
 
   @override
   String get operator => 'IS DISTINCT FROM';
+}
+
+/// JSONB contains expression (@> operator)
+class _JsonbContainsExpression extends _TwoPartColumnExpression<Jsonb> {
+  _JsonbContainsExpression(super.column, super.other);
+
+  @override
+  String get operator => '@>';
+}
+
+/// JSONB has key expression (? operator)
+class _JsonbHasKeyExpression extends _TwoPartColumnExpression<Jsonb> {
+  _JsonbHasKeyExpression(super.column, super.other);
+
+  @override
+  String get operator => '?';
 }
 
 abstract class _MinMaxColumnExpression<T> extends ColumnExpression<T> {
